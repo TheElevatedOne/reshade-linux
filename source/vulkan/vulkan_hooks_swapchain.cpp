@@ -13,6 +13,9 @@
 #include "runtime_manager.hpp"
 #include "lockfree_linear_map.hpp"
 #include <algorithm> // std::fill_n, std::sort, std::unique
+#ifndef _WIN32
+#include "platform_linux.hpp"
+#endif
 
 #define vk device_impl->_dispatch_table
 
@@ -324,6 +327,12 @@ VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreat
 		swapchain_impl->_create_info.pNext = nullptr; // Clear out structure chain pointer, since it becomes invalid once leaving the current scope
 		swapchain_impl->_hwnd = hwnd;
 	}
+
+#ifndef _WIN32
+	// Remember the swap chain size, which is used to scale mouse coordinates when the window size cannot be queried (e.g. on Wayland)
+	if (hwnd != nullptr)
+		reshade::linux_platform::set_window_size(hwnd, create_info.imageExtent.width, create_info.imageExtent.height);
+#endif
 
 	device_impl->register_object<VK_OBJECT_TYPE_SWAPCHAIN_KHR>(swapchain_impl->_orig, swapchain_impl);
 

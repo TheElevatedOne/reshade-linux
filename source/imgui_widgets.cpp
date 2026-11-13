@@ -11,6 +11,12 @@
 #include <cwctype> // std::towlower
 #include <algorithm> // std::find, std::max, std::min, std::replace std::transform
 
+#ifdef _WIN32
+#define RESHADE_CURRENT_DIRECTORY L".\\"
+#else
+#define RESHADE_CURRENT_DIRECTORY L"./"
+#endif
+
 extern std::filesystem::path g_reshade_base_path;
 
 extern std::string expand_macro_string(const std::string &input, std::vector<std::pair<std::string_view, std::string>> macros = {});
@@ -133,7 +139,7 @@ bool reshade::imgui::file_dialog(const char *name, std::filesystem::path &path, 
 
 	std::error_code ec;
 	if (path.empty())
-		path = L".\\";
+		path = RESHADE_CURRENT_DIRECTORY;
 	if (path.is_relative() && path.native()[0] != L'%')
 		path = g_reshade_base_path / path;
 	std::filesystem::path parent_path = path.parent_path();

@@ -34,7 +34,11 @@ bool reshade::ini_file::load()
 	// Clear when file does not exist too
 	_sections.clear();
 
+#ifdef _WIN32
 	FILE *const file = _wfsopen(_path.c_str(), L"r", SH_DENYWR);
+#else
+	FILE *const file = fopen(_path.c_str(), "r");
+#endif
 	if (file == nullptr)
 		return false;
 
@@ -130,7 +134,7 @@ bool reshade::ini_file::save()
 
 	std::error_code ec;
 	const std::filesystem::file_time_type modified_at = std::filesystem::last_write_time(_path, ec);
-	if (!ec && (modified_at - _modified_at) > std::chrono::seconds(2))
+	if (!ec && _modified_at != std::filesystem::file_time_type::min() && (modified_at - _modified_at) > std::chrono::seconds(2))
 		return false; // File exists and was modified on disk and therefore may have different data, so cannot save
 
 	std::string data;
@@ -204,7 +208,11 @@ bool reshade::ini_file::save()
 		}
 	}
 
+#ifdef _WIN32
 	FILE *const file = _wfsopen(_path.c_str(), L"w", SH_DENYWR);
+#else
+	FILE *const file = fopen(_path.c_str(), "w");
+#endif
 	if (file == nullptr)
 		return false;
 	const size_t file_size_written = fwrite(data.data(), 1, data.size(), file);

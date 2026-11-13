@@ -301,8 +301,10 @@ VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevi
 		else
 		{
 			// No Man's Sky initializes OpenVR before loading Vulkan (and therefore before loading ReShade), so need to manually install OpenVR hooks now when used
+#ifdef _WIN32
 			extern void check_and_init_openvr_hooks();
 			check_and_init_openvr_hooks();
+#endif
 
 #if VK_KHR_swapchain_mutable_format
 			add_extension(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME, true);
@@ -532,7 +534,7 @@ VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevi
 				0 == std::strcmp(name_without_prefix, "SubmitDebugUtilsMessageEXT") ||
 				0 == std::strcmp(name_without_prefix, "CreateDebugUtilsMessengerEXT") ||
 				0 == std::strcmp(name_without_prefix, "DestroyDebugUtilsMessengerEXT") ||
-				(std::strstr(name_without_prefix, "Properties") != nullptr && std::strstr(name_without_prefix, "AccelerationStructures") == nullptr && std::strstr(name_without_prefix, "Handle") == nullptr) ||
+				(std::strstr(name_without_prefix, "Properties") != nullptr && std::strstr(name_without_prefix, "AccelerationStructures") == nullptr && std::strstr(name_without_prefix, "Handle") == nullptr && std::strstr(name_without_prefix, "FdProperties") == nullptr) ||
 				(std::strstr(name_without_prefix, "Surface") != nullptr && std::strstr(name_without_prefix, "DeviceGroupSurface") == nullptr) ||
 				(std::strstr(name_without_prefix, "PhysicalDevice") != nullptr))
 				return reinterpret_cast<GLADapiproc>(device.dispatch_table.GetInstanceProcAddr(device.instance_handle, name));

@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# ReShade for Linux launcher
+#
+# Runs a program with the ReShade Vulkan layer enabled, the same as setting RESHADE=1:
+#   reshade vkcube
+#   reshade %command%            (Steam launch options, works for native and Proton games)
+#
+# Manages the default effects that are copied into every game directory on first launch:
+#   reshade --download-shaders [<git-url> [<branch>]]...
+#   reshade --list-shaders
+set -euo pipefail
+
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+data_dir="$data_home/reshade"
+repo_dir="$data_dir/repositories"
+shader_dir="$data_dir/reshade-shaders"
+system_data_dir="@RESHADE_DATA_DIR@"
+
+default_repo="https://github.com/crosire/reshade-shaders"
+default_branch="slim"
+compatibility_url="https://raw.githubusercontent.com/crosire/reshade-shaders/list/Compatibility.ini"
+
+usage() {
+	cat <<USAGE
+Usage: reshade [options] <command> [arguments...]
+
+Runs <command> with ReShade enabled (sets RESHADE=1, like "mangohud <command>").
+For Steam games, set the launch options to "reshade %command%" or "RESHADE=1 %command%".
+
+On the first launch of a game, ReShade copies the default effects into a "reshade-shaders"
+directory next to the game executable and creates ReShade.ini there, the same way the
+Windows setup tool installs ReShade. Effects added to that directory only apply to that game.
+
+Options:
+  --download-shaders [<git-url> [<branch>]]
+                        Download effects into $shader_dir, which is copied
+                        into new game directories (default: crosire/reshade-shaders, branch
+                        "slim"). Can be given several times to add more effect repositories.
+  --list-shaders        List the effect files that are copied into new game directories.
+  --update-shaders      Also copy effects that were added to the default effects since a game
+                        was first launched (only copies missing files, never overwrites).
+  --log                 Mirror the ReShade log to standard error.
+  -h, --help            Show this help.
+
+Environment variables:
+  RESHADE=1                    Enable the ReShade Vulkan layer.
+  DISABLE_RESHADE=1            Disable it again (e.g. for child processes).
+  RESHADE_BASE_PATH=<dir>      Use <dir> instead of the game directory for ReShade.ini, presets
+                               and effects.
+  RESHADE_UPDATE_SHADERS=1     Same as --update-shaders.
+  RESHADE_DISABLE_INPUT_GRAB=1 Do not grab mouse/keyboard while the overlay is open (X11).
+  RESHADE_DISABLE_GLOBAL_SHORTCUTS=1
+                               Do not register global shortcuts with the desktop portal.
+  RESHADE_LOG_STDERR=1         Same as --log.
+
+Global shortcuts:
+  While a game runs, ReShade registers its actions with the desktop (XDG global shortcuts
+  portal) as "me.reshade.ReShade:<action>", with the actions toggle-overlay, toggle-effects,
+  screenshot, reload-effects, next-preset, previous-preset and toggle-fps.
+  KDE Plasma:      System Settings > Keyboard > Shortcuts > ReShade
+  Hyprland (Lua):  hl.bind("SUPER + F12", function() hl.dispatch(hl.dsp.global("me.reshade.ReShade:toggle-overlay")) end)
+  Hyprland (conf): bind = SUPER, F12, global, me.reshade.ReShade:toggle-overlay
+USAGE
+}
+
+download_shaders() {
+	local url="$1" branch="$2"
+	command -v git >/dev/null || { echo "reshade: git is required to download effects" >&2; exit 1; }
+
+	local name
+	name="$(basename "${url%.git}")-$branch"
+	mkdir -p "$repo_dir"
+
+	if [ -d "$repo_dir/$name/.git" ]; then
+		echo "Updating $url ($branch) ..."
+		git -C "$repo_dir/$name" fetch --depth 1 origin "$branch"
+		git -C "$repo_dir/$name" reset --hard FETCH_HEAD
+	else
+		echo "Downloading $url ($branch) ..."
+		git clone --depth 1 --branch "$branch" "$url" "$repo_dir/$name"
+	fi
+
+	# Effect repositories use different layouts, copy the usual "Shaders" and "Textures" directories (case-insensitive)
+	local found=0 dir
+	while IFS= read -r -d '' dir; do
+		case "$(basename "$dir" | tr '[:upper:]' '[:lower:]')" in
+			shaders) mkdir -p "$shader_dir/Shaders"; cp -r "$dir/." "$shader_dir/Shaders/"; found=1 ;;
+			textures) mkdir -p "$shader_dir/Textures"; cp -r "$dir/." "$shader_dir/Textures/"; found=1 ;;
+		esac
+	done < <(find "$repo_dir/$name" -maxdepth 2 -type d \( -iname shaders -o -iname textures \) -not -path '*/.git/*' -print0)
+
+	if [ "$found" -eq 0 ]; then
+		# Repositories without the usual layout keep their .fx/.fxh files in the root
+		mkdir -p "$shader_dir/Shaders/$name"
+		find "$repo_dir/$name" -maxdepth 1 -type f \( -iname '*.fx' -o -iname '*.fxh' \) -exec cp {} "$shader_dir/Shaders/$name/" \;
+	fi
+
+	echo "Installed effects from $url into $shader_dir"
+}
+
+download_compatibility_list() {
+	command -v curl >/dev/null || return 0
+	curl -fsSL "$compatibility_url" -o "$data_dir/Compatibility.ini.tmp" && mv "$data_dir/Compatibility.ini.tmp" "$data_dir/Compatibility.ini" || rm -f "$data_dir/Compatibility.ini.tmp"
+}
+
+list_shaders() {
+	local dir
+	for dir in "$shader_dir" "$system_data_dir/reshade-shaders"; do
+		[ -d "$dir/Shaders" ] || continue
+		echo "$dir:"
+		find "$dir/Shaders" -type f -iname '*.fx' -printf '  %P\n' | sort
+	done
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help)
+			usage
+			exit 0
+			;;
+		--download-shaders)
+			shift
+			mkdir -p "$data_dir"
+			if [ $# -gt 0 ] && [[ "$1" != -* ]]; then
+				url="$1"; shift
+				branch="${1:-}"
+				if [ -n "$branch" ] && [[ "$branch" != -* ]]; then shift; else branch="master"; fi
+				download_shaders "$url" "$branch"
+			else
+				download_shaders "$default_repo" "$default_branch"
+			fi
+			download_compatibility_list
+			[ $# -gt 0 ] || exit 0
+			;;
+		--list-shaders)
+			list_shaders
+			exit 0
+			;;
+		--update-shaders)
+			export RESHADE_UPDATE_SHADERS=1
+			shift
+			;;
+		--log)
+			export RESHADE_LOG_STDERR=1
+			shift
+			;;
+		--)
+			shift
+			break
+			;;
+		-*)
+			echo "reshade: unknown option '$1' (see reshade --help)" >&2
+			exit 1
+			;;
+		*)
+			break
+			;;
+	esac
+done
+
+if [ $# -eq 0 ]; then
+	usage >&2
+	exit 1
+fi
+
+if [ ! -d "$shader_dir/Shaders" ] && [ ! -d "$system_data_dir/reshade-shaders/Shaders" ]; then
+	echo "reshade: no default effects installed yet, run 'reshade --download-shaders' to download the standard set" >&2
+fi
+
+export RESHADE=1
+exec "$@"

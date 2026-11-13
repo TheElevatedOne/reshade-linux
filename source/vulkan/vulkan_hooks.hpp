@@ -59,14 +59,30 @@ struct vulkan_instance
 	PFN_vk##name trampoline = g_vulkan_instances.at(dispatch_key_from_handle(object)).dispatch_table.name; \
 	assert(trampoline != nullptr)
 
-extern "C" PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *pName);
-extern "C" PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+#ifdef _WIN32
+#define RESHADE_VULKAN_LAYER_EXPORT
+#else
+// The Vulkan loader looks up these entry points in the layer library with 'dlsym'
+#define RESHADE_VULKAN_LAYER_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" RESHADE_VULKAN_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *pName);
+extern "C" RESHADE_VULKAN_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *pName);
 
 VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkInstance *pInstance);
 void     VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator);
 
 #if VK_KHR_win32_surface
 VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
+#endif
+#if VK_KHR_xlib_surface
+VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
+#endif
+#if VK_KHR_xcb_surface
+VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
+#endif
+#if VK_KHR_wayland_surface
+VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 #endif
 #if VK_KHR_surface
 void     VKAPI_CALL vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator);

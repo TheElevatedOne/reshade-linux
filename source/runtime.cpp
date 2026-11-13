@@ -35,6 +35,20 @@
 #include <stb_image_write_hdr_png.h>
 #include <stb_image_resize2.h>
 
+#ifndef _WIN32
+#include "linux/global_shortcuts_linux.hpp"
+// Activations of the global shortcuts registered with the desktop portal (see global_shortcuts_linux.cpp)
+#define RESHADE_GLOBAL_SHORTCUT(name) reshade::global_shortcuts::consume(reshade::global_shortcuts::action::name)
+#else
+#define RESHADE_GLOBAL_SHORTCUT(name) false
+#endif
+
+#ifdef _WIN32
+#define RESHADE_CURRENT_DIRECTORY L".\\"
+#else
+#define RESHADE_CURRENT_DIRECTORY L"./"
+#endif
+
 std::string expand_macro_string(const std::string &input, std::vector<std::pair<std::string_view, std::string>> macros = {})
 {
 	std::string result;
@@ -297,13 +311,13 @@ reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphic
 	_start_time(std::chrono::high_resolution_clock::now()),
 	_last_present_time(_start_time),
 	_last_frame_duration(std::chrono::milliseconds(1)),
-	_effect_search_paths({ L".\\" }),
-	_texture_search_paths({ L".\\" }),
+	_effect_search_paths({ RESHADE_CURRENT_DIRECTORY }),
+	_texture_search_paths({ RESHADE_CURRENT_DIRECTORY }),
 	_config_path(config_path),
-	_screenshot_path(L".\\"),
+	_screenshot_path(RESHADE_CURRENT_DIRECTORY),
 	_screenshot_name("%AppName% %Date% %Time%_%Count%"), // Ensure unique naming with screenshot count because users may request more than one screenshot per second
 	_screenshot_post_save_command_arguments("\"%TargetPath%\""),
-	_screenshot_post_save_command_working_directory(L".\\")
+	_screenshot_post_save_command_working_directory(RESHADE_CURRENT_DIRECTORY)
 {
 	assert(swapchain != nullptr && graphics_queue != nullptr);
 
@@ -774,7 +788,8 @@ void reshade::runtime::on_present()
 	// Handle keyboard shortcuts
 	if (!_ignore_shortcuts && _input != nullptr)
 	{
-		if (_input->is_key_pressed(_effects_key_data, _force_shortcut_modifiers))
+		// Use bitwise or so that global shortcut activations are always consumed
+		if (RESHADE_GLOBAL_SHORTCUT(toggle_effects) | _input->is_key_pressed(_effects_key_data, _force_shortcut_modifiers))
 		{
 #if RESHADE_ADDON
 			if (!invoke_addon_event<addon_event::reshade_set_effects_state>(this, !_effects_enabled))
@@ -782,7 +797,7 @@ void reshade::runtime::on_present()
 				_effects_enabled = !_effects_enabled;
 		}
 
-		if (_input->is_key_pressed(_screenshot_key_data, _force_shortcut_modifiers))
+		if (RESHADE_GLOBAL_SHORTCUT(screenshot) | _input->is_key_pressed(_screenshot_key_data, _force_shortcut_modifiers))
 		{
 			_screenshot_count++;
 			_should_save_screenshot = true; // Remember that we want to save a screenshot next frame
@@ -858,11 +873,11 @@ void reshade::runtime::on_present()
 				}
 			}
 
-			if (_input->is_key_pressed(_reload_key_data, _force_shortcut_modifiers))
+			if (RESHADE_GLOBAL_SHORTCUT(reload_effects) | _input->is_key_pressed(_reload_key_data, _force_shortcut_modifiers))
 				reload_effects();
 
-			if (const bool reversed = _input->is_key_pressed(_prev_preset_key_data, _force_shortcut_modifiers);
-				reversed || _input->is_key_pressed(_next_preset_key_data, _force_shortcut_modifiers))
+			if (const bool reversed = RESHADE_GLOBAL_SHORTCUT(previous_preset) | _input->is_key_pressed(_prev_preset_key_data, _force_shortcut_modifiers);
+				reversed || (RESHADE_GLOBAL_SHORTCUT(next_preset) | _input->is_key_pressed(_next_preset_key_data, _force_shortcut_modifiers)))
 			{
 				// The preset shortcut key was pressed down, so start the transition
 				if (switch_to_next_preset(_current_preset_path.parent_path(), reversed))
@@ -886,6 +901,41 @@ void reshade::runtime::on_present()
 				load_current_preset();
 		}
 	}
+#ifndef _WIN32
+	else if (!_ignore_shortcuts)
+	{
+		// Global shortcuts still work when there is no keyboard and mouse input for the window (e.g. when no Wayland seat could be bound)
+		if (RESHADE_GLOBAL_SHORTCUT(toggle_effects))
+		{
+#if RESHADE_ADDON
+			if (!invoke_addon_event<addon_event::reshade_set_effects_state>(this, !_effects_enabled))
+#endif
+				_effects_enabled = !_effects_enabled;
+		}
+
+		if (RESHADE_GLOBAL_SHORTCUT(screenshot))
+		{
+			_screenshot_count++;
+			_should_save_screenshot = true;
+		}
+
+		if (!is_loading())
+		{
+			if (RESHADE_GLOBAL_SHORTCUT(reload_effects))
+				reload_effects();
+
+			if (const bool reversed = RESHADE_GLOBAL_SHORTCUT(previous_preset);
+				reversed || RESHADE_GLOBAL_SHORTCUT(next_preset))
+			{
+				if (switch_to_next_preset(_current_preset_path.parent_path(), reversed))
+					save_config();
+			}
+
+			if (_is_in_preset_transition)
+				load_current_preset();
+		}
+	}
+#endif
 
 	// Stretch main render target back into MSAA back buffer if MSAA is active or copy when format conversion is required
 	if (_back_buffer_resolved != 0)
@@ -1027,8 +1077,19 @@ void reshade::runtime::load_config()
 	std::error_code ec;
 	if (!resolve_path(_effect_cache_path, ec))
 	{
+#ifdef _WIN32
 		_effect_cache_path = std::filesystem::temp_directory_path(ec) / "ReShade";
 		std::filesystem::create_directory(_effect_cache_path, ec);
+#else
+		// Use the user cache directory ("$XDG_CACHE_HOME/reshade" or "~/.cache/reshade") instead of the shared temp directory
+		if (const char *const cache_home = std::getenv("XDG_CACHE_HOME"); cache_home != nullptr && cache_home[0] == '/')
+			_effect_cache_path = std::filesystem::path(cache_home) / "reshade";
+		else if (const char *const home = std::getenv("HOME"); home != nullptr)
+			_effect_cache_path = std::filesystem::path(home) / ".cache" / "reshade";
+		else
+			_effect_cache_path = std::filesystem::temp_directory_path(ec) / "reshade";
+		std::filesystem::create_directories(_effect_cache_path, ec);
+#endif
 		if (ec)
 			log::message(log::level::error, "Failed to create effect cache directory '%s' with error code %d!", _effect_cache_path.u8string().c_str(), ec.value());
 	}
@@ -1771,9 +1832,12 @@ bool reshade::runtime::load_effect(const std::filesystem::path &source_file, con
 		else
 			shader_model = 51; // D3D12
 
+#ifdef _WIN32
 		if ((_renderer_id & 0xF0000) == 0)
 			codegen.reset(reshadefx::create_codegen_dxbc(shader_model, !_no_debug_info, _performance_mode, _performance_mode ? 3 : 1));
-		else if (_renderer_id < 0x20000)
+		else
+#endif
+		if (_renderer_id < 0x20000)
 			codegen.reset(reshadefx::create_codegen_glsl(false, !_no_debug_info, _performance_mode, false, true));
 		else // Vulkan uses SPIR-V input
 			codegen.reset(reshadefx::create_codegen_spirv(true, !_no_debug_info, _performance_mode, false, false));

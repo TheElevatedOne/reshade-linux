@@ -9,6 +9,15 @@
 #include <cassert>
 #include <unordered_set>
 
+#ifndef _WIN32
+// Set by the Linux entry point to disable effect runtimes in helper processes (see dll_main_linux.cpp)
+extern bool g_reshade_runtime_enabled;
+#endif
+
+#ifndef _WIN32
+#include "linux/global_shortcuts_linux.hpp"
+#endif
+
 static std::shared_mutex s_runtime_config_names_mutex;
 static std::unordered_set<std::string> s_runtime_config_names;
 
@@ -16,6 +25,14 @@ void reshade::create_effect_runtime(api::swapchain *swapchain, api::command_queu
 {
 	if (graphics_queue == nullptr || swapchain->get_private_data<reshade::runtime>() != nullptr)
 		return;
+
+#ifndef _WIN32
+	if (!g_reshade_runtime_enabled)
+		return;
+
+	// Announce the actions to the desktop, so that keys can be bound to them in the desktop settings
+	reshade::global_shortcuts::start();
+#endif
 
 	assert((graphics_queue->get_type() & api::command_queue_type::graphics) != 0);
 

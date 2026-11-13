@@ -4,16 +4,19 @@
  */
 
 #include "state_block.hpp"
+#ifdef _WIN32
 #include "d3d9/d3d9_impl_state_block.hpp"
 #include "d3d10/d3d10_impl_state_block.hpp"
 #include "d3d11/d3d11_impl_state_block.hpp"
 #include "opengl/opengl_impl_device.hpp"
 #include "opengl/opengl_impl_state_block.hpp"
+#endif
 
 void reshade::api::create_state_block(api::device *device, state_block *out_state_block)
 {
 	switch (device->get_api())
 	{
+#ifdef _WIN32
 	case api::device_api::d3d9:
 		*out_state_block = { reinterpret_cast<uintptr_t>(new d3d9::state_block(reinterpret_cast<IDirect3DDevice9 *>(device->get_native()))) };
 		break;
@@ -26,6 +29,7 @@ void reshade::api::create_state_block(api::device *device, state_block *out_stat
 	case api::device_api::opengl:
 		*out_state_block = { reinterpret_cast<uintptr_t>(new opengl::state_block(static_cast<opengl::device_impl *>(device))) };
 		break;
+#endif
 	default:
 		*out_state_block = { 0 };
 		break;
@@ -35,6 +39,7 @@ void reshade::api::destroy_state_block(api::device *device, state_block state_bl
 {
 	switch (device->get_api())
 	{
+#ifdef _WIN32
 	case api::device_api::d3d9:
 		delete reinterpret_cast<d3d9::state_block *>(state_block.handle);
 		break;
@@ -47,6 +52,7 @@ void reshade::api::destroy_state_block(api::device *device, state_block state_bl
 	case api::device_api::opengl:
 		delete reinterpret_cast<opengl::state_block *>(state_block.handle);
 		break;
+#endif
 	}
 }
 
@@ -56,6 +62,7 @@ void reshade::api::apply_state(api::command_list *cmd_list, state_block state_bl
 
 	switch (device->get_api())
 	{
+#ifdef _WIN32
 	case api::device_api::d3d9:
 		reinterpret_cast<d3d9::state_block *>(state_block.handle)->apply_and_release();
 		break;
@@ -68,6 +75,7 @@ void reshade::api::apply_state(api::command_list *cmd_list, state_block state_bl
 	case api::device_api::opengl:
 		reinterpret_cast<opengl::state_block *>(state_block.handle)->apply();
 		break;
+#endif
 	}
 }
 void reshade::api::capture_state(api::command_list *cmd_list, state_block state_block)
@@ -76,6 +84,7 @@ void reshade::api::capture_state(api::command_list *cmd_list, state_block state_
 
 	switch (device->get_api())
 	{
+#ifdef _WIN32
 	case api::device_api::d3d9:
 		reinterpret_cast<d3d9::state_block *>(state_block.handle)->capture();
 		break;
@@ -88,5 +97,6 @@ void reshade::api::capture_state(api::command_list *cmd_list, state_block state_
 	case api::device_api::opengl:
 		reinterpret_cast<opengl::state_block *>(state_block.handle)->capture();
 		break;
+#endif
 	}
 }

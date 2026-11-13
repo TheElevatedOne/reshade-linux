@@ -9,6 +9,9 @@
 #include "hook_manager.hpp"
 #endif
 #include "lockfree_linear_map.hpp"
+#ifndef _WIN32
+#include "platform_linux.hpp"
+#endif
 #include <cstring> // std::strcmp
 
 extern lockfree_linear_map<void *, vulkan_instance, 16> g_vulkan_instances;
@@ -23,6 +26,11 @@ extern lockfree_linear_map<void *, reshade::vulkan::device_impl *, 8> g_vulkan_d
 
 PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *pName)
 {
+#ifndef _WIN32
+	// Initialize on first use, after all global variables were constructed (see dll_main_linux.cpp)
+	reshade::linux_platform::initialize();
+#endif
+
 	if (pName == nullptr || pName[0] != 'v' || pName[1] != 'k')
 		return nullptr;
 	const char *name_without_prefix = pName + 2;
@@ -327,6 +335,11 @@ PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *p
 
 PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *pName)
 {
+#ifndef _WIN32
+	// Initialize on first use, after all global variables were constructed (see dll_main_linux.cpp)
+	reshade::linux_platform::initialize();
+#endif
+
 	if (pName == nullptr || pName[0] != 'v' || pName[1] != 'k')
 		return nullptr;
 	const char *name_without_prefix = pName + 2;
@@ -344,6 +357,15 @@ PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const c
 
 #if VK_KHR_win32_surface
 	RESHADE_VULKAN_HOOK_PROC(CreateWin32SurfaceKHR);
+#endif
+#if VK_KHR_xlib_surface
+	RESHADE_VULKAN_HOOK_PROC(CreateXlibSurfaceKHR);
+#endif
+#if VK_KHR_xcb_surface
+	RESHADE_VULKAN_HOOK_PROC(CreateXcbSurfaceKHR);
+#endif
+#if VK_KHR_wayland_surface
+	RESHADE_VULKAN_HOOK_PROC(CreateWaylandSurfaceKHR);
 #endif
 
 #if VK_KHR_surface

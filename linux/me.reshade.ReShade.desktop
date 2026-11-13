@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ReShade
+Comment=Post-processing injector for games (global shortcuts)
+Icon=me.reshade.ReShade
+Exec=reshade --help
+Terminal=true
+NoDisplay=true
+Categories=Game;Utility;

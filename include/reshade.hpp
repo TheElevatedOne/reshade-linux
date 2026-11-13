@@ -47,7 +47,7 @@ RESHADE_API_LIBRARY_DECL bool ReShadeCreateEffectRuntime(reshade::api::device_ap
 RESHADE_API_LIBRARY_DECL void ReShadeDestroyEffectRuntime(reshade::api::effect_runtime *runtime);
 RESHADE_API_LIBRARY_DECL void ReShadeUpdateAndPresentEffectRuntime(reshade::api::effect_runtime *runtime);
 
-#else
+#elif defined(_WIN32)
 
 #include <Windows.h>
 
@@ -94,6 +94,68 @@ namespace reshade::internal
 	}
 }
 
+#else
+
+#include <dlfcn.h>
+#include <link.h>
+
+namespace reshade
+{
+	// Module handles are the 'link_map' pointers of shared objects on Linux (which is also what 'dlopen' returns)
+	using HMODULE = void *;
+
+	inline void *GetProcAddress(HMODULE module, const char *name)
+	{
+		return module != nullptr ? dlsym(module, name) : nullptr;
+	}
+}
+
+namespace reshade::internal
+{
+	/// <summary>
+	/// Gets the handle to the ReShade module.
+	/// </summary>
+	inline HMODULE get_reshade_module_handle(HMODULE initial_handle = nullptr)
+	{
+		static HMODULE handle = initial_handle;
+		if (handle == nullptr)
+		{
+			// ReShade is loaded by the Vulkan loader with 'RTLD_LOCAL', so look through all loaded modules for the one exporting the add-on API
+			dl_iterate_phdr([](dl_phdr_info *info, size_t, void *data) -> int {
+				if (info->dlpi_name == nullptr || info->dlpi_name[0] == '\0')
+					return 0;
+				const HMODULE module = dlopen(info->dlpi_name, RTLD_NOW | RTLD_NOLOAD);
+				if (module == nullptr)
+					return 0;
+				if (dlsym(module, "ReShadeRegisterAddon") != nullptr && dlsym(module, "ReShadeUnregisterAddon") != nullptr)
+				{
+					*static_cast<HMODULE *>(data) = module;
+					return 1;
+				}
+				dlclose(module);
+				return 0;
+			}, &handle);
+		}
+		return handle;
+	}
+
+	/// <summary>
+	/// Gets the handle to the current add-on module.
+	/// </summary>
+	inline HMODULE get_current_module_handle(HMODULE initial_handle = nullptr)
+	{
+		static HMODULE handle = initial_handle;
+		if (handle == nullptr)
+		{
+			// Find the module that contains this function (which is compiled into the add-on, since it is inline)
+			Dl_info info = {};
+			link_map *map = nullptr;
+			if (dladdr1(reinterpret_cast<const void *>(&get_current_module_handle), &info, reinterpret_cast<void **>(&map), RTLD_DL_LINKMAP))
+				handle = map;
+		}
+		return handle;
+	}
+}
 #endif
 
 namespace reshade

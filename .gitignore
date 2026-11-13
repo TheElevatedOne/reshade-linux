@@ -43,3 +43,7 @@ Thumbs.db
 /res/[Vv]ersion.h
 /setup/*.ini
 /setup/Properties/AssemblyInfo.cs
+
+# Linux build
+build-linux/
+build-linux32/

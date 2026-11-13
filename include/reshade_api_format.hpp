@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "reshade_platform.hpp"
 #include <cfloat>
 #include <cstdint>
 

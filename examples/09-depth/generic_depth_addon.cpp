@@ -13,7 +13,12 @@
 #include <cstdio> // std::snprintf
 #include <cstring> // std::strcmp
 #include <algorithm> // std::find_if, std::remove, std::sort
+#ifdef _WIN32
 #include <Unknwn.h>
+#else
+#include <chrono>
+#include <thread>
+#endif
 
 using namespace reshade::api;
 
@@ -249,8 +254,10 @@ struct __declspec(uuid("e006e162-33ac-4b9f-b10f-0e15335c7bdb")) generic_depth_de
 			if (depth_stencil_resources.find(depth_stencil) == depth_stencil_resources.end())
 				return nullptr;
 
+#ifdef _WIN32
 			// Add reference to the resource so that it is not destroyed while it is being copied to the backup texture
 			reinterpret_cast<IUnknown *>(depth_stencil.handle)->AddRef();
+#endif
 		}
 
 		desc.type = resource_type::texture_2d;
@@ -304,8 +311,10 @@ struct __declspec(uuid("e006e162-33ac-4b9f-b10f-0e15335c7bdb")) generic_depth_de
 		{
 			reshade::log::message(reshade::log::level::error, "Failed to create backup depth-stencil texture!");
 
+#ifdef _WIN32
 			if (api <= device_api::d3d12)
 				reinterpret_cast<IUnknown *>(depth_stencil.handle)->Release();
+#endif
 
 			return nullptr;
 		}
@@ -330,8 +339,10 @@ struct __declspec(uuid("e006e162-33ac-4b9f-b10f-0e15335c7bdb")) generic_depth_de
 		const device_api api = device->get_api();
 		if (api <= device_api::d3d12)
 		{
+#ifdef _WIN32
 			// Release the reference that was added above
 			reinterpret_cast<IUnknown *>(depth_stencil.handle)->Release();
+#endif
 		}
 	}
 };
@@ -701,7 +712,11 @@ static void on_destroy_resource(device *device, resource resource)
 
 			// This is bad ... the resource may still be in use by an effect on the GPU and destroying it would crash it
 			// Try to mitigate that somehow by delaying this thread a little to hopefully give the GPU enough time to catch up before the resource memory is deallocated
+#ifdef _WIN32
 			Sleep(500);
+#else
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+#endif
 		}
 	}
 }

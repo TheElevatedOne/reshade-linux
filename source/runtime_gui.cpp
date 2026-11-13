@@ -23,6 +23,20 @@
 #include <cstring> // std::memcmp, std::memcpy
 #include <algorithm> // std::any_of, std::count_if, std::find, std::find_if, std::max, std::min, std::replace, std::rotate, std::search, std::swap, std::transform
 
+#ifndef _WIN32
+#include "linux/global_shortcuts_linux.hpp"
+// Activations of the global shortcuts registered with the desktop portal (see global_shortcuts_linux.cpp)
+#define RESHADE_GLOBAL_SHORTCUT(name) reshade::global_shortcuts::consume(reshade::global_shortcuts::action::name)
+#else
+#define RESHADE_GLOBAL_SHORTCUT(name) false
+#endif
+
+#ifdef _WIN32
+#define RESHADE_CURRENT_DIRECTORY L".\\"
+#else
+#define RESHADE_CURRENT_DIRECTORY L"./"
+#endif
+
 extern bool resolve_path(std::filesystem::path &path, std::error_code &ec, const std::filesystem::path &base = g_reshade_base_path);
 
 static bool string_contains(const std::string_view text, const std::string_view filter)
@@ -777,17 +791,27 @@ void reshade::runtime::draw_gui()
 		if (_show_overlay && !_ignore_shortcuts && _input->is_key_pressed(input::key_escape) &&
 			(_input_processing_mode == 2 || (_input_processing_mode == 1 && (_imgui_context->IO.WantCaptureMouse || _imgui_context->IO.WantCaptureKeyboard))) && !_imgui_context->IO.NavVisible)
 			show_overlay = false; // Close when pressing the escape button, input focus is on the overlay and not currently navigating with the keyboard
-		else if (!_ignore_shortcuts && _input->is_key_pressed(_overlay_key_data, _force_shortcut_modifiers) && _imgui_context->ActiveId == 0)
+		else if (!_ignore_shortcuts && (RESHADE_GLOBAL_SHORTCUT(toggle_overlay) | _input->is_key_pressed(_overlay_key_data, _force_shortcut_modifiers)) && _imgui_context->ActiveId == 0)
 			show_overlay = !_show_overlay;
 
 		if (!_ignore_shortcuts)
 		{
-			if (_input->is_key_pressed(_fps_key_data, _force_shortcut_modifiers))
+			if (RESHADE_GLOBAL_SHORTCUT(toggle_fps) | _input->is_key_pressed(_fps_key_data, _force_shortcut_modifiers))
 				_show_fps = _show_fps ? 0 : 1;
 			if (_input->is_key_pressed(_frametime_key_data, _force_shortcut_modifiers))
 				_show_frametime = _show_frametime ? 0 : 1;
 		}
 	}
+#ifndef _WIN32
+	else if (!_ignore_shortcuts)
+	{
+		// Global shortcuts still work when there is no keyboard and mouse input for the window
+		if (RESHADE_GLOBAL_SHORTCUT(toggle_overlay))
+			show_overlay = !_show_overlay;
+		if (RESHADE_GLOBAL_SHORTCUT(toggle_fps))
+			_show_fps = _show_fps ? 0 : 1;
+	}
+#endif
 
 	if (_input_gamepad != nullptr)
 	{
@@ -3150,11 +3174,13 @@ void reshade::runtime::draw_gui_about()
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_RESHADE);
 		ImGui::TextUnformatted(static_cast<const char *>(resource.data), static_cast<const char *>(resource.data) + resource.data_size);
 	}
+#ifdef _WIN32
 	if (ImGui::CollapsingHeader("MinHook"))
 	{
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_MINHOOK);
 		ImGui::TextUnformatted(static_cast<const char *>(resource.data), static_cast<const char *>(resource.data) + resource.data_size);
 	}
+#endif
 	if (ImGui::CollapsingHeader("Dear ImGui"))
 	{
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_IMGUI);
@@ -3203,16 +3229,20 @@ THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMP
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_VMA);
 		ImGui::TextUnformatted(static_cast<const char *>(resource.data), static_cast<const char *>(resource.data) + resource.data_size);
 	}
+#ifdef _WIN32
 	if (ImGui::CollapsingHeader("OpenVR"))
 	{
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_OPENVR);
 		ImGui::TextUnformatted(static_cast<const char *>(resource.data), static_cast<const char *>(resource.data) + resource.data_size);
 	}
+#endif
+#ifdef _WIN32
 	if (ImGui::CollapsingHeader("OpenXR"))
 	{
 		const resources::data_resource resource = resources::load_data_resource(IDR_LICENSE_OPENXR);
 		ImGui::TextUnformatted(static_cast<const char *>(resource.data), static_cast<const char *>(resource.data) + resource.data_size);
 	}
+#endif
 	if (ImGui::CollapsingHeader("Solarized"))
 	{
 		ImGui::TextUnformatted("Copyright (C) 2011 Ethan Schoonover\
@@ -3254,7 +3284,7 @@ void reshade::runtime::draw_gui_addons()
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(_("This build of ReShade has only limited add-on functionality."));
 #else
-	std::filesystem::path addon_search_path = L".\\";
+	std::filesystem::path addon_search_path = RESHADE_CURRENT_DIRECTORY;
 	config.get("ADDON", "AddonPath", addon_search_path);
 	if (imgui::directory_input_box(_("Add-on search path"), addon_search_path, _file_selection_path))
 		config.set("ADDON", "AddonPath", addon_search_path);

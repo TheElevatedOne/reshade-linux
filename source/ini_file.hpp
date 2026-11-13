@@ -305,7 +305,22 @@ namespace reshade
 			if constexpr (std::is_same_v<T, std::string>)
 				return i < values.size() ? values[i] : std::string();
 			if constexpr (std::is_same_v<T, std::filesystem::path>)
+			{
+#ifndef _WIN32
+				// Accept Windows path separators in configuration files (e.g. when copied over from a Windows installation)
+				if (i < values.size())
+				{
+					std::string value = values[i];
+					for (char &c : value)
+						if (c == '\\')
+							c = '/';
+					return std::filesystem::u8path(value);
+				}
+				return std::filesystem::path();
+#else
 				return i < values.size() ? std::filesystem::u8path(values[i]) : std::filesystem::path();
+#endif
+			}
 		}
 
 		/// <summary>
@@ -320,7 +335,8 @@ namespace reshade
 		const std::filesystem::path _path;
 		std::unordered_map<std::string, section_type> _sections;
 		bool _modified = false;
-		std::filesystem::file_time_type _modified_at;
+		// Start at the minimum, since the epoch of the file clock is not the oldest possible time on all platforms (e.g. it is in the year 2174 with libstdc++)
+		std::filesystem::file_time_type _modified_at = std::filesystem::file_time_type::min();
 	};
 
 	/// <summary>

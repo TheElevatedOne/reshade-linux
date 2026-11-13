@@ -10,7 +10,11 @@
 #include "dll_log.hpp"
 #include "ini_file.hpp"
 #include <algorithm> // std::find, std::find_if, std::remove, std::remove_if
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include "linux/module_linux.hpp"
+#endif
 
 extern void register_addon_depth();
 extern void register_addon_effect_runtime_sync();
@@ -216,7 +220,7 @@ void reshade::load_addons()
 		addon_search_path = g_reshade_base_path / addon_search_path;
 
 	log::message(log::level::info, "Searching for add-ons (*.addon"
-#ifndef _WIN64
+#if !defined(_WIN64) && !defined(__LP64__)
 		", *.addon32"
 #else
 		", *.addon64"
@@ -227,7 +231,7 @@ void reshade::load_addons()
 	for (std::filesystem::path path : std::filesystem::directory_iterator(addon_search_path, std::filesystem::directory_options::skip_permission_denied, ec))
 	{
 		if (path.extension() != L".addon" &&
-#ifndef _WIN64
+#if !defined(_WIN64) && !defined(__LP64__)
 			path.extension() != L".addon32")
 #else
 			path.extension() != L".addon64")
@@ -269,11 +273,22 @@ void reshade::load_addons()
 
 		log::message(log::level::info, "Loading add-on from '%s' ...", path.u8string().c_str());
 
+#ifdef _WIN32
 		// Use 'LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR' to temporarily add add-on search path to the list of directories 'LoadLibraryEx' will use to resolve DLL dependencies
 		const HMODULE module = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 		if (module == nullptr)
 		{
 			const DWORD error_code = GetLastError();
+#else
+		// Add-ons are shared objects with a different extension, which register themselves from a constructor function (or 'AddonInit')
+		const HMODULE module = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+		if (module == nullptr)
+		{
+			const char *const error_string = dlerror();
+			const unsigned long error_code = 0;
+			log::message(log::level::error, "> %s", error_string != nullptr ? error_string : "Unknown error");
+			constexpr unsigned long ERROR_DLL_INIT_FAILED = 1;
+#endif
 
 			if (error_code == ERROR_DLL_INIT_FAILED && !addon_loaded_info.empty() && path.filename().u8string() == addon_loaded_info.back().file)
 			{
@@ -360,7 +375,11 @@ void reshade::unload_addons()
 			continue;
 
 		if (!FreeLibrary(module))
+#ifdef _WIN32
 			log::message(log::level::warning, "Failed to unload '%s' with error code %lu!", info.file.c_str(), GetLastError());
+#else
+			log::message(log::level::warning, "Failed to unload '%s': %s", info.file.c_str(), dlerror());
+#endif
 
 		if (addon_info *const registered_info = find_addon(module))
 		{
@@ -406,9 +425,20 @@ reshade::addon_info *reshade::find_addon(const void *address)
 	if (address == nullptr)
 		return nullptr;
 
+#ifdef _WIN32
 	HMODULE module = nullptr;
 	if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(address), &module))
 		return nullptr;
+#else
+	// Module handles are not addresses inside the module on Linux, so check whether a module handle was passed in first
+	for (auto it = addon_loaded_info.rbegin(); it != addon_loaded_info.rend(); ++it)
+		if (it->handle == address)
+			return &(*it);
+
+	const HMODULE module = get_module_handle_from_address(address);
+	if (module == nullptr)
+		return nullptr;
+#endif
 
 	assert(module != nullptr);
 
@@ -444,6 +474,7 @@ bool ReShadeRegisterAddon(void *module, uint32_t api_version)
 	info.handle = module;
 	info.api_version = api_version;
 
+#ifdef _WIN32
 	DWORD version_dummy, version_size = GetFileVersionInfoSizeW(path.c_str(), &version_dummy);
 	std::vector<uint8_t> version_data(version_size);
 	if (GetFileVersionInfoW(path.c_str(), version_dummy, version_size, version_data.data()))
@@ -479,6 +510,7 @@ bool ReShadeRegisterAddon(void *module, uint32_t api_version)
 			};
 		}
 	}
+#endif
 
 	if (const char *const *name = reinterpret_cast<const char *const *>(GetProcAddress(static_cast<HMODULE>(module), "NAME")))
 		info.name = *name;

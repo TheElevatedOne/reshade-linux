@@ -4,6 +4,10 @@
  */
 
 #include "vulkan_hooks.hpp"
+#ifndef _WIN32
+#include "platform_linux.hpp"
+#include <dlfcn.h>
+#endif
 #include "dll_log.hpp"
 #ifdef RESHADE_TEST_APPLICATION
 #include "hook_manager.hpp"
@@ -112,7 +116,15 @@ VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, co
 	// 'vkEnumerateInstanceExtensionProperties' is not included in the next 'vkGetInstanceProcAddr' from the call chain, so use global one instead
 	const auto enum_instance_extensions = reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(GetProcAddress(GetModuleHandleW(L"vulkan-1.dll"), "vkEnumerateInstanceExtensionProperties"));
 #else
-	const auto enum_instance_extensions = reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(get_instance_proc_addr(VK_NULL_HANDLE, "vkEnumerateInstanceExtensionProperties"));
+	// Same on Linux, since not every layer further down the chain supports global functions in its 'vkGetInstanceProcAddr' (e.g. the Mesa device select layer crashes)
+	PFN_vkEnumerateInstanceExtensionProperties enum_instance_extensions = nullptr;
+	if (void *const loader_module = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_NOLOAD))
+	{
+		enum_instance_extensions = reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(dlsym(loader_module, "vkEnumerateInstanceExtensionProperties"));
+		dlclose(loader_module);
+	}
+	if (enum_instance_extensions == nullptr)
+		enum_instance_extensions = reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(get_instance_proc_addr(VK_NULL_HANDLE, "vkEnumerateInstanceExtensionProperties"));
 #endif
 	if (enum_instance_extensions == nullptr)
 		return VK_ERROR_INITIALIZATION_FAILED;
@@ -239,12 +251,77 @@ VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32Su
 	return VK_SUCCESS;
 }
 #endif
+#if VK_KHR_xlib_surface
+VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface)
+{
+	reshade::log::message(reshade::log::level::info, "Redirecting vkCreateXlibSurfaceKHR(instance = %p, pCreateInfo = %p, pAllocator = %p, pSurface = %p) ...", instance, pCreateInfo, pAllocator, pSurface);
+
+	RESHADE_VULKAN_GET_INSTANCE_DISPATCH_PTR(CreateXlibSurfaceKHR, instance);
+	const VkResult result = trampoline(instance, pCreateInfo, pAllocator, pSurface);
+	if (result != VK_SUCCESS)
+	{
+		reshade::log::message(reshade::log::level::warning, "vkCreateXlibSurfaceKHR failed with error code %d.", static_cast<int>(result));
+		return result;
+	}
+
+	// Use the X11 window ID as window handle (see input_linux.cpp)
+	g_vulkan_surfaces.emplace(*pSurface, reinterpret_cast<HWND>(static_cast<uintptr_t>(pCreateInfo->window)));
+
+	return VK_SUCCESS;
+}
+#endif
+#if VK_KHR_xcb_surface
+VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface)
+{
+	reshade::log::message(reshade::log::level::info, "Redirecting vkCreateXcbSurfaceKHR(instance = %p, pCreateInfo = %p, pAllocator = %p, pSurface = %p) ...", instance, pCreateInfo, pAllocator, pSurface);
+
+	RESHADE_VULKAN_GET_INSTANCE_DISPATCH_PTR(CreateXcbSurfaceKHR, instance);
+	const VkResult result = trampoline(instance, pCreateInfo, pAllocator, pSurface);
+	if (result != VK_SUCCESS)
+	{
+		reshade::log::message(reshade::log::level::warning, "vkCreateXcbSurfaceKHR failed with error code %d.", static_cast<int>(result));
+		return result;
+	}
+
+	// Use the X11 window ID as window handle (see input_linux.cpp)
+	g_vulkan_surfaces.emplace(*pSurface, reinterpret_cast<HWND>(static_cast<uintptr_t>(pCreateInfo->window)));
+
+	return VK_SUCCESS;
+}
+#endif
+#if VK_KHR_wayland_surface
+VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface)
+{
+	reshade::log::message(reshade::log::level::info, "Redirecting vkCreateWaylandSurfaceKHR(instance = %p, pCreateInfo = %p, pAllocator = %p, pSurface = %p) ...", instance, pCreateInfo, pAllocator, pSurface);
+
+	RESHADE_VULKAN_GET_INSTANCE_DISPATCH_PTR(CreateWaylandSurfaceKHR, instance);
+	const VkResult result = trampoline(instance, pCreateInfo, pAllocator, pSurface);
+	if (result != VK_SUCCESS)
+	{
+		reshade::log::message(reshade::log::level::warning, "vkCreateWaylandSurfaceKHR failed with error code %d.", static_cast<int>(result));
+		return result;
+	}
+
+	// Use the 'wl_surface' pointer as window handle and remember its display, so that input can be received through a seat on that display (see input_linux.cpp)
+	reshade::linux_platform::register_wayland_surface(pCreateInfo->surface, pCreateInfo->display);
+	g_vulkan_surfaces.emplace(*pSurface, reinterpret_cast<HWND>(pCreateInfo->surface));
+
+	return VK_SUCCESS;
+}
+#endif
 #if VK_KHR_surface
 void     VKAPI_CALL vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator)
 {
-	reshade::log::message(reshade::log::level::info, "Redirecting vkDestroySurfaceKHR(instance = %p, surface = %p, pAllocator = %) ...", instance, surface, pAllocator);
+	reshade::log::message(reshade::log::level::info, "Redirecting vkDestroySurfaceKHR(instance = %p, surface = %p, pAllocator = %p) ...", instance, surface, pAllocator);
 
+#ifndef _WIN32
+	// The surface may be null or of a type that is not tracked (e.g. a headless or display surface)
+	if (surface != VK_NULL_HANDLE)
+		if (const HWND window = g_vulkan_surfaces.erase(surface); window != nullptr)
+			reshade::linux_platform::unregister_window(window);
+#else
 	g_vulkan_surfaces.erase(surface);
+#endif
 
 	RESHADE_VULKAN_GET_INSTANCE_DISPATCH_PTR(DestroySurfaceKHR, instance);
 	trampoline(instance, surface, pAllocator);

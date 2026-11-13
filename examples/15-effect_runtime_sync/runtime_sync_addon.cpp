@@ -9,7 +9,9 @@
 #include <shared_mutex>
 #include <vector>
 #include <algorithm> // std::remove
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 using namespace reshade::api;
 
@@ -25,7 +27,11 @@ static void on_init(effect_runtime *runtime)
 
 	if (!reshade::get_config_value(nullptr, "ADDON", "SyncEffectRuntimes", s_sync))
 		// Enable synchronization by default if application is using VR
+#ifdef _WIN32
 		s_sync = GetModuleHandleW(L"openvr_api.dll") != nullptr || GetModuleHandleW(L"openxr_loader.dll") != nullptr;
+#else
+		s_sync = false;
+#endif
 }
 static void on_destroy(effect_runtime *runtime)
 {
