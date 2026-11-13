@@ -13,8 +13,8 @@ options=('!debug' '!strip')
 # Release tags are "v<ReShade version>.<release of this port>".
 source=("$url/releases/download/v$pkgver/$_pkgname-$pkgver-x86_64.tar.gz"
         "$url/releases/download/v$pkgver/$_pkgname-$pkgver-x86.tar.gz")
-sha256sums=('SKIP'
-            'SKIP')
+sha256sums=('9aacefcd7b4afedf5e99156466b23a9c177a47f7afd3c3322659d8153cc2fb5c'
+            '924895f7b1a66737aefdfdc391edcada96a38b134ccf47bf471ff315cebc72c6')
 
 package_reshade-linux-bin() {
   depends=('glibc' 'libxcb' 'libxkbcommon' 'wayland' 'dbus' 'vulkan-icd-loader' 'bash' 'git')

@@ -2,7 +2,7 @@
 pkgbase=reshade-linux-git
 pkgname=(reshade-linux-git lib32-reshade-linux-git)
 _pkgname=reshade-linux
-pkgver=6.8.0_r28_g7bf9de8b
+pkgver=6.8.0.1_r0_g608c161b
 pkgrel=1
 pkgdesc="crosire's ReShade post-processing injector as a native Vulkan layer, enabled with RESHADE=1 (works with Proton via DXVK/VKD3D) (git version)"
 arch=('x86_64')
