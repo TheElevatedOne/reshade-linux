@@ -1,6 +1,6 @@
 # Changelog
 
-Releases are tagged `v<ReShade version>.<release>`: `v6.8.0.1` is the first release of this port based on ReShade 6.8.0.
+Releases are tagged `<ReShade version>.<release>`: `6.8.0.1` is the first release of this port based on ReShade 6.8.0.
 
 ## 6.8.0.1
 

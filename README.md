@@ -120,7 +120,7 @@ sudo cmake --install build-linux32
 
 The build generates the Vulkan function loader with `glad` (from `deps/glad`) on the first build, which needs
 `python-jinja`. The version number comes from `git describe`, so fetch the tags of the repository as well. Releases of this port
-are tagged `v<ReShade version>.<release>` (e.g. `v6.8.0.1`), see [CHANGELOG.md](CHANGELOG.md).
+are tagged `<ReShade version>.<release>` (e.g. `6.8.0.1`), see [CHANGELOG.md](CHANGELOG.md).
 
 | CMake option | Default | Description |
 |---|---|---|

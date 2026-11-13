@@ -1,5 +1,5 @@
 # Builds the 64-bit and 32-bit ReShade layers on Arch Linux (multilib).
-# Pushing a tag such as v6.8.0.1 (ReShade version + release of this port) also publishes a GitHub release with
+# Pushing a tag such as 6.8.0.1 (ReShade version + release of this port) also publishes a GitHub release with
 # reshade-linux-<version>-x86_64.tar.gz and reshade-linux-<version>-x86.tar.gz, which the reshade-linux-bin and
 # lib32-reshade-linux-bin AUR packages download. The release notes are the tag's section in CHANGELOG.md.
 name: Build
@@ -7,7 +7,7 @@ name: Build
 on:
   push:
     branches: [main]
-    tags: ["v*.*.*.*"]
+    tags: ["[0-9]*"]
   pull_request:
   workflow_dispatch:
 
@@ -46,9 +46,9 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            version="${GITHUB_REF_NAME#v}"
+            version="$GITHUB_REF_NAME"
           else
-            version="$(git describe --long --tags --abbrev=8 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/_/g')"
+            version="$(git describe --long --tags --abbrev=8 | sed 's/\([^-]*-g\)/r\1/;s/-/_/g')"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Version $version"
@@ -97,12 +97,12 @@ jobs:
       - name: Release notes
         run: |
           # The lines between "## <version>" and the next "## " heading.
-          awk -v v="${GITHUB_REF_NAME#v}" '
+          awk -v v="$GITHUB_REF_NAME" '
             /^## / { if (found) exit; if ($0 == "## " v) { found = 1; next } }
             found { print }
           ' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then
-            echo "::error::CHANGELOG.md has no \"## ${GITHUB_REF_NAME#v}\" section"
+            echo "::error::CHANGELOG.md has no \"## $GITHUB_REF_NAME\" section"
             exit 1
           fi
           cat release-notes.md
@@ -115,5 +115,5 @@ jobs:
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* --title "ReShade for Linux ${GITHUB_REF_NAME#v}" --notes-file release-notes.md
+            gh release create "$GITHUB_REF_NAME" dist/* --title "ReShade for Linux $GITHUB_REF_NAME" --notes-file release-notes.md
           fi

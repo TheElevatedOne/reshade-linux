@@ -18,7 +18,7 @@ them with `reshade --download-shaders`.
 
 ## reshade-linux-bin
 
-Releases are tagged `v<ReShade version>.<release>` (e.g. `v6.8.0.1`), and `pkgver` is the tag without the `v`.
+Releases are tagged `<ReShade version>.<release>` (e.g. `6.8.0.1`), and `pkgver` is the tag.
 Pushing such a tag runs `.github/workflows/build.yml`, which builds both layers on Arch Linux and attaches
 `reshade-linux-<version>-x86_64.tar.gz` and `reshade-linux-<version>-x86.tar.gz` to the GitHub release. The release
 notes are the `## <version>` section of `CHANGELOG.md`. The tarballs are made by `linux/make-release-tarball.sh`.
@@ -35,7 +35,7 @@ makepkg --printsrcinfo > .SRCINFO
 
 The 32-bit build uses `linux/toolchain-i686.cmake` and needs the multilib repository. The submodules in `deps/` are
 listed as separate git sources and pointed at in `prepare()`, so `makepkg` caches them. `pkgver` comes from
-`git describe` (e.g. `6.8.0.1_r3_gabcdef12`), so the repository has to carry the `v*` tags.
+`git describe` (e.g. `6.8.0.1_r3_gabcdef12`), so the repository has to carry the release tags.
 
 Regenerate `.SRCINFO` after changing the PKGBUILD:
 
