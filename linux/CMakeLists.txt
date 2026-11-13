@@ -31,7 +31,13 @@ if(GIT_FOUND)
     OUTPUT_VARIABLE RESHADE_GIT_DESCRIBE
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
-  if(RESHADE_GIT_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)-([0-9]+)-")
+  # Upstream tags are "v<major>.<minor>.<revision>", releases of this port add the port release: "v<major>.<minor>.<revision>.<release>"
+  if(RESHADE_GIT_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)-[0-9]+-g")
+    set(RESHADE_VERSION_MAJOR ${CMAKE_MATCH_1})
+    set(RESHADE_VERSION_MINOR ${CMAKE_MATCH_2})
+    set(RESHADE_VERSION_REVISION ${CMAKE_MATCH_3})
+    set(RESHADE_VERSION_BUILD ${CMAKE_MATCH_4})
+  elseif(RESHADE_GIT_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)-([0-9]+)-g")
     set(RESHADE_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(RESHADE_VERSION_MINOR ${CMAKE_MATCH_2})
     set(RESHADE_VERSION_REVISION ${CMAKE_MATCH_3})

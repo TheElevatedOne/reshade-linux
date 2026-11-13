@@ -47,3 +47,4 @@ Thumbs.db
 # Linux build
 build-linux/
 build-linux32/
+dist/

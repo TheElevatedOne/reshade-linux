@@ -1,6 +1,6 @@
 # ReShade for Linux
 
-![Static Badge](https://img.shields.io/badge/CLAUDE-VIBECODED?style=for-the-badge&logo=claude&label=VIBECODED&labelColor=%23333333&color=%23de7356) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-git) [![AUR Version](https://img.shields.io/aur/version/lib32-reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/lib32-reshade-linux-git)
+![Static Badge](https://img.shields.io/badge/CLAUDE-VIBECODED?style=for-the-badge&logo=claude&label=VIBECODED&labelColor=%23333333&color=%23de7356) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-bin?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-bin) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-git) [![AUR Version](https://img.shields.io/aur/version/lib32-reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/lib32-reshade-linux-git)
 
 <p align="center"><img src="res/main_icon.svg" alt="ReShade icon" width="128"></p>
 
@@ -64,12 +64,37 @@ path through the Wine prefix (`WINEPREFIX`, or `STEAM_COMPAT_DATA_PATH/pfx` for 
 
 | Package | Source |
 |---|---|
+| `reshade-linux-bin` | the 64-bit layer and launcher from the latest release |
+| `lib32-reshade-linux-bin` | the 32-bit layer from the latest release, for 32-bit games |
 | `reshade-linux-git` | builds the latest commit of this repository (64-bit layer, launcher) |
 | `lib32-reshade-linux-git` | the 32-bit layer from the same build, for 32-bit games |
 
 ```sh
-yay -S reshade-linux-git lib32-reshade-linux-git
+yay -S reshade-linux-bin lib32-reshade-linux-bin
 ```
+
+### Release tarball
+
+Each [release][releases] has two tarballs, built on Arch Linux:
+
+| File | Contents |
+|---|---|
+| `reshade-linux-<version>-x86_64.tar.gz` | `bin/reshade`, `lib/reshade/libreshade.so`, the layer manifest, desktop entry and icon |
+| `reshade-linux-<version>-x86.tar.gz` | `lib32/reshade/libreshade.so` and its layer manifest |
+
+The tarballs contain the `/usr` tree without the `usr/` prefix. The layer manifests point to
+`/usr/lib/reshade/libreshade.so` and `/usr/lib32/reshade/libreshade.so`, so install the files to those paths:
+
+```sh
+tar xzf reshade-linux-6.8.0.1-x86_64.tar.gz
+sudo cp -r reshade-linux-6.8.0.1-x86_64/{bin,lib,share} /usr/
+
+tar xzf reshade-linux-6.8.0.1-x86.tar.gz
+sudo cp -r reshade-linux-6.8.0.1-x86/{lib32,share} /usr/
+```
+
+On distributions that keep 32-bit libraries elsewhere (e.g. `/usr/lib/i386-linux-gnu`), build the 32-bit layer
+yourself instead.
 
 ### Building
 
@@ -94,14 +119,15 @@ sudo cmake --install build-linux32
 ```
 
 The build generates the Vulkan function loader with `glad` (from `deps/glad`) on the first build, which needs
-`python-jinja`. The version number comes from `git describe`, so fetch the tags of the repository as well.
+`python-jinja`. The version number comes from `git describe`, so fetch the tags of the repository as well. Releases of this port
+are tagged `v<ReShade version>.<release>` (e.g. `v6.8.0.1`), see [CHANGELOG.md](CHANGELOG.md).
 
 | CMake option | Default | Description |
 |---|---|---|
 | `RESHADE_LAYER_NAME` | `VK_LAYER_reshade` | Vulkan layer name (the architecture is appended) |
 | `RESHADE_DATA_DIR` | `<prefix>/share/reshade` | system-wide default effects (`reshade-shaders/`) and `Compatibility.ini` |
 | `RESHADE_INSTALL_SHARED_FILES` | `ON` | install the launcher and desktop entry (turn off for the 32-bit build) |
-| `RESHADE_VERSION_OVERRIDE` | from `git describe` | version to build as (`<major>.<minor>.<revision>`), for builds without the git tags |
+| `RESHADE_VERSION_OVERRIDE` | from `git describe` | version to build as (`<major>.<minor>.<revision>[.<release>]`), for builds without the git tags |
 
 ## Usage
 
@@ -283,4 +309,5 @@ Some source files are also available under the MIT license, when stated at the t
 
 [ReShade]: https://github.com/crosire/reshade
 [issues]: https://github.com/TheElevatedOne/reshade-linux/issues
+[releases]: https://github.com/TheElevatedOne/reshade-linux/releases
 [crosire/reshade-shaders]: https://github.com/crosire/reshade-shaders

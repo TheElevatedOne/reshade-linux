@@ -1,0 +1,119 @@
+# Builds the 64-bit and 32-bit ReShade layers on Arch Linux (multilib).
+# Pushing a tag such as v6.8.0.1 (ReShade version + release of this port) also publishes a GitHub release with
+# reshade-linux-<version>-x86_64.tar.gz and reshade-linux-<version>-x86.tar.gz, which the reshade-linux-bin and
+# lib32-reshade-linux-bin AUR packages download. The release notes are the tag's section in CHANGELOG.md.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+.[0-9]+"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (Arch Linux ${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            packages: libx11 libxcb libxkbcommon wayland dbus
+            cmake_args: -DCMAKE_INSTALL_LIBDIR=lib
+          - arch: x86
+            packages: libx11 libxcb libxkbcommon wayland dbus lib32-gcc-libs lib32-glibc lib32-libx11 lib32-libxcb lib32-libxkbcommon lib32-wayland lib32-dbus
+            cmake_args: -DCMAKE_TOOLCHAIN_FILE=linux/toolchain-i686.cmake -DCMAKE_INSTALL_LIBDIR=lib32 -DRESHADE_INSTALL_SHARED_FILES=OFF
+    steps:
+      - name: Install dependencies
+        run: |
+          printf '\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >> /etc/pacman.conf
+          pacman -Syu --noconfirm --needed git cmake ninja gcc pkgconf python python-jinja ${{ matrix.packages }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # The version comes from 'git describe', which needs the tags
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(git describe --long --tags --abbrev=8 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/_/g')"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version $version"
+
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ${{ matrix.cmake_args }}
+          cmake --build build
+
+      - name: Test
+        run: |
+          # The Vulkan loader looks up these entry points in the layer
+          nm -D --defined-only build/linux/libreshade.so | grep -w vkGetInstanceProcAddr
+          nm -D --defined-only build/linux/libreshade.so | grep -w vkGetDeviceProcAddr
+          python -m json.tool build/linux/reshade_layer.json >/dev/null
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            bash -n build/linux/reshade
+            bash build/linux/reshade --help >/dev/null
+          fi
+
+      - name: Package
+        run: linux/make-release-tarball.sh build "${{ steps.version.outputs.version }}" ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reshade-linux-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reshade-linux-*
+          merge-multiple: true
+          path: dist
+
+      - name: Release notes
+        run: |
+          # The lines between "## <version>" and the next "## " heading.
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            /^## / { if (found) exit; if ($0 == "## " v) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::CHANGELOG.md has no \"## ${GITHUB_REF_NAME#v}\" section"
+            exit 1
+          fi
+          cat release-notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --title "ReShade for Linux ${GITHUB_REF_NAME#v}" --notes-file release-notes.md
+          fi

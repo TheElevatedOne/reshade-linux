@@ -62,7 +62,7 @@ pkgname = reshade-linux-git
 
 pkgname = lib32-reshade-linux-git
 	pkgdesc = crosire's ReShade post-processing injector as a native Vulkan layer (32-bit) (git version)
-	depends = reshade-linux-git
+	depends = reshade-linux
 	depends = lib32-glibc
 	depends = lib32-libxcb
 	depends = lib32-libxkbcommon

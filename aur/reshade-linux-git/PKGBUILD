@@ -77,7 +77,7 @@ package_reshade-linux-git() {
 
 package_lib32-reshade-linux-git() {
   pkgdesc="crosire's ReShade post-processing injector as a native Vulkan layer (32-bit) (git version)"
-  depends=("reshade-linux-git" 'lib32-glibc' 'lib32-libxcb' 'lib32-libxkbcommon' 'lib32-wayland' 'lib32-dbus' 'lib32-vulkan-icd-loader')
+  depends=('reshade-linux' 'lib32-glibc' 'lib32-libxcb' 'lib32-libxkbcommon' 'lib32-wayland' 'lib32-dbus' 'lib32-vulkan-icd-loader')
   provides=("${pkgname%-git}")
   conflicts=("${pkgname%-git}")
 

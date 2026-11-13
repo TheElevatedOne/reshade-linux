@@ -1,0 +1,42 @@
+pkgbase = reshade-linux-bin
+	pkgdesc = crosire's ReShade post-processing injector as a native Vulkan layer, enabled with RESHADE=1 (works with Proton via DXVK/VKD3D) (prebuilt)
+	pkgver = 6.8.0.1
+	pkgrel = 1
+	url = https://github.com/TheElevatedOne/reshade-linux
+	arch = x86_64
+	license = BSD-3-Clause
+	options = !debug
+	options = !strip
+	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/v6.8.0.1/reshade-linux-6.8.0.1-x86_64.tar.gz
+	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/v6.8.0.1/reshade-linux-6.8.0.1-x86.tar.gz
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = reshade-linux-bin
+	depends = glibc
+	depends = libxcb
+	depends = libxkbcommon
+	depends = wayland
+	depends = dbus
+	depends = vulkan-icd-loader
+	depends = bash
+	depends = git
+	optdepends = lib32-reshade-linux-bin: 32-bit games
+	optdepends = curl: download the depth buffer compatibility list with reshade --download-shaders
+	optdepends = xdg-desktop-portal: global shortcuts (e.g. xdg-desktop-portal-kde or xdg-desktop-portal-hyprland)
+	optdepends = pipewire-audio: screenshot sound (pw-play)
+	optdepends = xdg-utils: open folders and links from the overlay
+	provides = reshade-linux=6.8.0.1
+	conflicts = reshade-linux
+
+pkgname = lib32-reshade-linux-bin
+	pkgdesc = crosire's ReShade post-processing injector as a native Vulkan layer (32-bit) (prebuilt)
+	depends = reshade-linux
+	depends = lib32-glibc
+	depends = lib32-libxcb
+	depends = lib32-libxkbcommon
+	depends = lib32-wayland
+	depends = lib32-dbus
+	depends = lib32-vulkan-icd-loader
+	provides = lib32-reshade-linux=6.8.0.1
+	conflicts = lib32-reshade-linux
