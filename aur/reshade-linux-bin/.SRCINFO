@@ -7,10 +7,10 @@ pkgbase = reshade-linux-bin
 	license = BSD-3-Clause
 	options = !debug
 	options = !strip
-	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/v6.8.0.1/reshade-linux-6.8.0.1-x86_64.tar.gz
-	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/v6.8.0.1/reshade-linux-6.8.0.1-x86.tar.gz
-	sha256sums = 9aacefcd7b4afedf5e99156466b23a9c177a47f7afd3c3322659d8153cc2fb5c
-	sha256sums = 924895f7b1a66737aefdfdc391edcada96a38b134ccf47bf471ff315cebc72c6
+	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/6.8.0.1/reshade-linux-6.8.0.1-x86_64.tar.gz
+	source = https://github.com/TheElevatedOne/reshade-linux/releases/download/6.8.0.1/reshade-linux-6.8.0.1-x86.tar.gz
+	sha256sums = e91082eadc23d34a9c24c914a4fa6e7b4434b2f3b2a296a07d0a92a91c66ec29
+	sha256sums = b6b471aa213a835917beeaf329c9ffecfb3c4b45e19e369264ba44d4b9a64c8e
 
 pkgname = reshade-linux-bin
 	depends = glibc
