@@ -22,7 +22,8 @@ Pushing such a tag runs `.github/workflows/build.yml`, which builds both layers 
 `reshade-linux-<version>-x86_64.tar.gz` and `reshade-linux-<version>-x86.tar.gz` to the GitHub release. The release
 notes are the `## <version>` section of `CHANGELOG.md`. The tarballs are made by `linux/make-release-tarball.sh`.
 
-After a release, set `pkgver` in both PKGBUILDs, then update the checksums and `.SRCINFO`:
+The [AUR-PKGBUILDs] workflows pick up the new release (see [Publishing](#publishing)). To update the copies here
+by hand, set `pkgver` in both PKGBUILDs, then update the checksums and `.SRCINFO`:
 
 ```sh
 for pkg in reshade-linux-bin lib32-reshade-linux-bin; do
@@ -33,8 +34,8 @@ done
 ## -git packages
 
 The submodules in `deps/` are listed as separate git sources and pointed at in `prepare()`, so `makepkg` caches
-them. `pkgver` comes from `git describe` (e.g. `6.8.0.1_r3_gabcdef12`), so the repository has to carry the release
-tags.
+them. `pkgver` comes from `git describe --abbrev=7` (e.g. `6.8.0.1_r3_gabcdef1`), so the repository has to carry the
+release tags.
 
 Regenerate `.SRCINFO` after changing a PKGBUILD:
 
@@ -49,4 +50,11 @@ done
 `lib32-` packages depend on `reshade-linux`, so build and install the 64-bit package first, or skip the dependency
 check with `makepkg -d` for a test build.
 
+## Publishing
+
+The packages are published from [AUR-PKGBUILDs], which has a copy of each directory and one workflow per package.
+Every day the workflows check for a new release (`-bin`) or a new commit on `main` (`-git`), update `pkgver`, the
+checksums and `.SRCINFO`, and push the package to the AUR. Nothing is pushed to the AUR from this repository.
+
 [lib32]: https://wiki.archlinux.org/title/32-bit_package_guidelines
+[AUR-PKGBUILDs]: https://github.com/TheElevatedOne/AUR-PKGBUILDs
