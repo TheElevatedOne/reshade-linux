@@ -1,6 +1,6 @@
 # ReShade for Linux
 
-![Static Badge](https://img.shields.io/badge/CLAUDE-VIBECODED?style=for-the-badge&logo=claude&label=VIBECODED&labelColor=%23333333&color=%23de7356) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-bin?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-bin) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-git) [![AUR Version](https://img.shields.io/aur/version/lib32-reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/lib32-reshade-linux-git)
+![Static Badge](https://img.shields.io/badge/CLAUDE-VIBECODED?style=for-the-badge&logo=claude&label=VIBECODED&labelColor=%23333333&color=%23de7356) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-bin?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-bin) [![AUR Version](https://img.shields.io/aur/version/lib32-reshade-linux-bin?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/lib32-reshade-linux-bin) [![AUR Version](https://img.shields.io/aur/version/reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/reshade-linux-git) [![AUR Version](https://img.shields.io/aur/version/lib32-reshade-linux-git?style=for-the-badge&logo=archlinux)](https://aur.archlinux.org/packages/lib32-reshade-linux-git)
 
 <p align="center"><img src="res/main_icon.svg" alt="ReShade icon" width="128"></p>
 
@@ -66,8 +66,11 @@ path through the Wine prefix (`WINEPREFIX`, or `STEAM_COMPAT_DATA_PATH/pfx` for 
 |---|---|
 | `reshade-linux-bin` | the 64-bit layer and launcher from the latest release |
 | `lib32-reshade-linux-bin` | the 32-bit layer from the latest release, for 32-bit games |
-| `reshade-linux-git` | builds the latest commit of this repository (64-bit layer, launcher) |
-| `lib32-reshade-linux-git` | the 32-bit layer from the same build, for 32-bit games |
+| `reshade-linux-git` | builds the 64-bit layer and launcher from the latest commit of this repository |
+| `lib32-reshade-linux-git` | builds the 32-bit layer from the latest commit, for 32-bit games (needs the multilib repository) |
+
+The `lib32-` packages are separate packages that only contain the 32-bit layer. They need `reshade-linux-bin` or
+`reshade-linux-git` for the launcher and desktop entry, so you can mix a `-bin` and a `-git` package.
 
 ```sh
 yay -S reshade-linux-bin lib32-reshade-linux-bin
@@ -103,7 +106,7 @@ Build dependencies: `cmake`, `ninja`, `gcc`, `python`, `python-jinja`, `pkgconf`
 `lib32-wayland` and `lib32-dbus`.
 
 ```sh
-git clone --recursive https://github.com/TheElevatedOne/reshade-linux.git
+git clone --recurse-submodules https://github.com/TheElevatedOne/reshade-linux.git
 cd reshade-linux
 
 # 64-bit layer, launcher and desktop entry
