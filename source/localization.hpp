@@ -13,6 +13,13 @@ namespace reshade::resources
 
 		explicit localized_string(std::string &&data) : data(std::move(data)) {}
 
+		// For printf-style functions: pass the string as an argument to "%s" instead of as the format,
+		// since a translated or runtime string may contain '%' (and -Werror=format-security rejects it)
+		const char *c_str() const
+		{
+			return data.c_str();
+		}
+
 		operator const char *() const
 		{
 			return data.c_str();

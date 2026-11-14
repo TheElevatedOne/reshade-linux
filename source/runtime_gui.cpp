@@ -1125,11 +1125,11 @@ void reshade::runtime::draw_gui()
 
 				if (_input == nullptr)
 				{
-					ImGui::TextColored(COLOR_YELLOW, _("No keyboard or mouse input available."));
+					ImGui::TextColored(COLOR_YELLOW, "%s", _("No keyboard or mouse input available.").c_str());
 					if (_input_gamepad != nullptr)
 					{
 						ImGui::SameLine();
-						ImGui::TextColored(COLOR_YELLOW, _("Use gamepad instead: Press 'left + right shoulder + start button' to open the configuration overlay."));
+						ImGui::TextColored(COLOR_YELLOW, "%s", _("Use gamepad instead: Press 'left + right shoulder + start button' to open the configuration overlay.").c_str());
 					}
 				}
 				else if (_tutorial_index == 0)
@@ -1172,7 +1172,7 @@ void reshade::runtime::draw_gui()
 			{
 				error_message += static_cast<std::string &&>(_("Check the log for more details."));
 				ImGui::Spacing();
-				ImGui::TextColored(COLOR_RED, error_message.c_str());
+				ImGui::TextColored(COLOR_RED, "%s", error_message.c_str());
 			}
 		}
 
@@ -1204,7 +1204,7 @@ void reshade::runtime::draw_gui()
 		{
 			if (!_last_screenshot_save_successful)
 				if (_screenshot_directory_creation_successful)
-					ImGui::TextColored(COLOR_RED, _("Unable to save screenshot because of an internal error (the format may not be supported or the drive may be full)."));
+					ImGui::TextColored(COLOR_RED, "%s", _("Unable to save screenshot because of an internal error (the format may not be supported or the drive may be full).").c_str());
 				else
 					ImGui::TextColored(COLOR_RED, _("Unable to save screenshot because path could not be created: %s"), (g_reshade_base_path / _screenshot_path).u8string().c_str());
 			else
@@ -1590,14 +1590,14 @@ void reshade::runtime::draw_gui_home()
 		if (ImGui::ArrowButtonEx("<", ImGuiDir_Left, ImVec2(button_height, button_height), ImGuiButtonFlags_NoNavFocus))
 			if (switch_to_next_preset(_current_preset_path.parent_path(), true))
 				reload_preset = true;
-		ImGui::SetItemTooltip(_("Previous preset"));
+		ImGui::SetItemTooltip("%s", _("Previous preset").c_str());
 
 		ImGui::SameLine(0, button_spacing);
 
 		if (ImGui::ArrowButtonEx(">", ImGuiDir_Right, ImVec2(button_height, button_height), ImGuiButtonFlags_NoNavFocus))
 			if (switch_to_next_preset(_current_preset_path.parent_path(), false))
 				reload_preset = true;
-		ImGui::SetItemTooltip(_("Next preset"));
+		ImGui::SetItemTooltip("%s", _("Next preset").c_str());
 
 		ImGui::SameLine();
 
@@ -1645,7 +1645,7 @@ void reshade::runtime::draw_gui_home()
 
 		if (ImGui::Button(ICON_FK_FOLDER, ImVec2(button_height, button_height)))
 			utils::open_explorer(_current_preset_path);
-		ImGui::SetItemTooltip(_("Open folder in explorer"));
+		ImGui::SetItemTooltip("%s", _("Open folder in explorer").c_str());
 
 		ImGui::SameLine();
 
@@ -1666,7 +1666,7 @@ void reshade::runtime::draw_gui_home()
 			_preset_is_modified = false;
 		}
 
-		ImGui::SetItemTooltip(_("Save current preset automatically on every modification."));
+		ImGui::SetItemTooltip("%s", _("Save current preset automatically on every modification.").c_str());
 
 		if (was_auto_save_preset)
 		{
@@ -1681,7 +1681,7 @@ void reshade::runtime::draw_gui_home()
 			if (imgui::confirm_button(ICON_FK_UNDO, button_height, _("Do you really want to reset all effects?")))
 				reload_preset = true;
 
-			ImGui::SetItemTooltip(_("Reset all effects to those of the current preset."));
+			ImGui::SetItemTooltip("%s", _("Reset all effects to those of the current preset.").c_str());
 
 			ImGui::EndDisabled();
 
@@ -1700,8 +1700,8 @@ void reshade::runtime::draw_gui_home()
 			_preset_is_modified = false;
 		}
 
-		ImGui::SetItemTooltip(save_and_clean_preset ?
-			_("Clean up and save the current preset (removes all values for disabled effects).") : _("Save the current preset."));
+		ImGui::SetItemTooltip("%s", (save_and_clean_preset ?
+			_("Clean up and save the current preset (removes all values for disabled effects).") : _("Save the current preset.")).c_str());
 
 		ImGui::EndDisabled();
 
@@ -1714,7 +1714,7 @@ void reshade::runtime::draw_gui_home()
 			ImGui::OpenPopup("##create");
 		}
 
-		ImGui::SetItemTooltip(_("Add a new preset."));
+		ImGui::SetItemTooltip("%s", _("Add a new preset.").c_str());
 
 		ImGui::EndDisabled();
 
@@ -1794,7 +1794,7 @@ void reshade::runtime::draw_gui_home()
 
 		if (ImGui::BeginPopup("##preseterror"))
 		{
-			ImGui::TextColored(COLOR_RED, _("The selected file is not a valid preset!"));
+			ImGui::TextColored(COLOR_RED, "%s", _("The selected file is not a valid preset!").c_str());
 			ImGui::EndPopup();
 		}
 
@@ -1819,7 +1819,7 @@ void reshade::runtime::draw_gui_home()
 
 		if (ImGui::BeginPopup("##presetincomplete"))
 		{
-			ImGui::TextColored(COLOR_RED, _("The selected preset uses unknown effects. Please install all required effect files!"));
+			ImGui::TextColored(COLOR_RED, "%s", _("The selected preset uses unknown effects. Please install all required effect files!").c_str());
 			ImGui::EndPopup();
 		}
 
@@ -2022,7 +2022,7 @@ void reshade::runtime::draw_gui_home()
 			reload_effects();
 		}
 
-		ImGui::SetItemTooltip(_("Reload all effects (can hold 'Ctrl' while clicking to clear the effect cache before loading)."));
+		ImGui::SetItemTooltip("%s", _("Reload all effects (can hold 'Ctrl' while clicking to clear the effect cache before loading).").c_str());
 
 		ImGui::SameLine();
 
@@ -2032,7 +2032,7 @@ void reshade::runtime::draw_gui_home()
 			reload_effects(); // Reload effects after switching
 		}
 
-		ImGui::SetItemTooltip(_("Reload all effects into a more optimal representation that can give a performance boost, but disables variable tweaking."));
+		ImGui::SetItemTooltip("%s", _("Reload all effects into a more optimal representation that can give a performance boost, but disables variable tweaking.").c_str());
 	}
 	else
 	{
@@ -2110,23 +2110,23 @@ void reshade::runtime::draw_gui_settings()
 			modified |= imgui::key_input_box(_("Next preset key"), _next_preset_key_data, *_input);
 
 			modified |= ImGui::SliderInt(_("Preset transition duration"), reinterpret_cast<int *>(&_preset_transition_duration), 0, 10 * 1000);
-			ImGui::SetItemTooltip(_(
+			ImGui::SetItemTooltip("%s", _(
 				"Make a smooth transition when switching presets, but only for floating point values.\n"
 				"Recommended for multiple presets that contain the same effects, otherwise set this to zero.\n"
-				"Values are in milliseconds."));
+				"Values are in milliseconds.").c_str());
 
 			ImGui::Spacing();
 		}
 
 		modified |= imgui::file_input_box(_("Start-up preset"), nullptr, _startup_preset_path, _file_selection_path, { L".ini", L".txt" });
-		ImGui::SetItemTooltip(_("When not empty, reset the current preset to this file during reloads."));
+		ImGui::SetItemTooltip("%s", _("When not empty, reset the current preset to this file during reloads.").c_str());
 
 		ImGui::Spacing();
 
 		modified |= imgui::path_list(_("Effect search paths"), _effect_search_paths, _file_selection_path, g_reshade_base_path);
-		ImGui::SetItemTooltip(_("List of directory paths to be searched for effect files (.fx).\nPaths that end in \"\\**\" are searched recursively."));
+		ImGui::SetItemTooltip("%s", _("List of directory paths to be searched for effect files (.fx).\nPaths that end in \"\\**\" are searched recursively.").c_str());
 		modified |= imgui::path_list(_("Texture search paths"), _texture_search_paths, _file_selection_path, g_reshade_base_path);
-		ImGui::SetItemTooltip(_("List of directory paths to be searched for image files used as source for textures.\nPaths that end in \"\\**\" are searched recursively."));
+		ImGui::SetItemTooltip("%s", _("List of directory paths to be searched for image files used as source for textures.\nPaths that end in \"\\**\" are searched recursively.").c_str());
 
 		if (ImGui::Checkbox(_("Load only enabled effects"), &_effect_load_skipping))
 		{
@@ -2209,12 +2209,12 @@ void reshade::runtime::draw_gui_settings()
 		modified |= ImGui::Checkbox(_("Save separate image with the overlay visible"), &_screenshot_save_gui);
 
 		modified |= imgui::file_input_box(_("Screenshot sound"), "sound.wav", _screenshot_sound_path, _file_selection_path, { L".wav" });
-		ImGui::SetItemTooltip(_("Audio file that is played when taking a screenshot."));
+		ImGui::SetItemTooltip("%s", _("Audio file that is played when taking a screenshot.").c_str());
 
 		modified |= imgui::file_input_box(_("Post-save command"), "command.bat", _screenshot_post_save_command, _file_selection_path, { L".exe", L".bat", L".cmd", L".ps1", L".py" });
-		ImGui::SetItemTooltip(_(
+		ImGui::SetItemTooltip("%s", _(
 			"Executable or script that is called after saving a screenshot.\n"
-			"This can be used to perform additional processing on the image (e.g. compressing it with an image optimizer)."));
+			"This can be used to perform additional processing on the image (e.g. compressing it with an image optimizer).").c_str());
 
 		char arguments[260];
 		arguments[_screenshot_post_save_command_arguments.copy(arguments, sizeof(arguments) - 1)] = '\0';
@@ -2314,7 +2314,7 @@ void reshade::runtime::draw_gui_settings()
 		modified |= ImGui::Checkbox(_("Show preset transition message"), &_show_preset_transition_message);
 		ImGui::EndDisabled();
 		if (_preset_transition_duration == 0 && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
-			ImGui::SetTooltip(_("Preset transition duration has to be non-zero for the preset transition message to show up."));
+			ImGui::SetTooltip("%s", _("Preset transition duration has to be non-zero for the preset transition message to show up.").c_str());
 
 		if (_effect_load_skipping)
 			modified |= ImGui::Checkbox(_("Show \"Force load all effects\" button"), &_show_force_load_effects_button);
@@ -2501,7 +2501,7 @@ void reshade::runtime::draw_gui_settings()
 			modified |= imgui::checkbox_tristate(_("Show frame time"), &_show_frametime);
 			modified |= imgui::checkbox_tristate(_("Show preset name"), &_show_preset_name);
 			ImGui::EndGroup();
-			ImGui::SetItemTooltip(_("Check to always show, fill out to only show while overlay is open."));
+			ImGui::SetItemTooltip("%s", _("Check to always show, fill out to only show while overlay is open.").c_str());
 
 			if (_input != nullptr)
 			{
@@ -3089,7 +3089,7 @@ void reshade::runtime::draw_gui_log()
 
 	if (ImGui::Button(ICON_FK_FOLDER, ImVec2(ImGui::GetFrameHeight(), 0.0f)))
 		utils::open_explorer(log_path);
-	ImGui::SetItemTooltip(_("Open folder in explorer"));
+	ImGui::SetItemTooltip("%s", _("Open folder in explorer").c_str());
 
 	ImGui::SameLine();
 
@@ -3390,17 +3390,17 @@ void reshade::runtime::draw_gui_addons()
 				ImGui::BeginGroup();
 
 				if (!builtin)
-					ImGui::Text(_("File:"));
+					ImGui::TextUnformatted(_("File:"));
 				if (!info.author.empty())
-					ImGui::Text(_("Author:"));
+					ImGui::TextUnformatted(_("Author:"));
 				if (info.version.value)
-					ImGui::Text(_("Version:"));
+					ImGui::TextUnformatted(_("Version:"));
 				if (!info.description.empty())
-					ImGui::Text(_("Description:"));
+					ImGui::TextUnformatted(_("Description:"));
 				if (!info.website_url.empty())
-					ImGui::Text(_("Website:"));
+					ImGui::TextUnformatted(_("Website:"));
 				if (!info.issues_url.empty())
-					ImGui::Text(_("Issues:"));
+					ImGui::TextUnformatted(_("Issues:"));
 
 				ImGui::EndGroup();
 				ImGui::SameLine(ImGui::GetWindowWidth() * 0.25f);
@@ -4126,7 +4126,7 @@ void reshade::runtime::draw_variable_editor()
 
 	if (ImGui::BeginPopup("##pperror"))
 	{
-		ImGui::TextColored(COLOR_RED, _("The effect failed to compile after this change, so reverted back to the default value."));
+		ImGui::TextColored(COLOR_RED, "%s", _("The effect failed to compile after this change, so reverted back to the default value.").c_str());
 		ImGui::EndPopup();
 	}
 
@@ -4145,7 +4145,7 @@ void reshade::runtime::draw_technique_editor()
 		for (const std::filesystem::path &search_path : _effect_search_paths)
 			ImGui::Text("  %s", (g_reshade_base_path / search_path).lexically_normal().u8string().c_str());
 		ImGui::Spacing();
-		ImGui::TextWrapped(_("Go to the settings and configure the 'Effect search paths' option to point to the directory containing effect files, then hit 'Reload'!"));
+		ImGui::TextWrapped("%s", _("Go to the settings and configure the 'Effect search paths' option to point to the directory containing effect files, then hit 'Reload'!").c_str());
 		ImGui::PopStyleColor();
 		return;
 	}
